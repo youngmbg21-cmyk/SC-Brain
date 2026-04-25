@@ -1323,12 +1323,12 @@ rh+='<td class="mono">'+fmt(r.fR)+'</td>';
 var isOrd=!!_orderedSkus[r.id];
 var _waQty=r.rop!=null?Math.max(r.rop,Math.ceil((r.adq3||0)*r.lt*2)):Math.ceil((r.adq3||0)*r.lt*2||50);
 var _waMsg=encodeURIComponent('Hi Supplier, I would like to place an order for '+_waQty+' units of '+r.n+' as recommended by my AI Advisor (SME Supply Advisor).');
-rh+='<td style="white-space:nowrap;display:flex;gap:4px;align-items:center">';
-rh+='<button class="ord-btn'+(isOrd?' is-ordered':'')+'" onclick="toggleOrdered(''+r.id+'',this)">';
+rh+='<td style="white-space:nowrap"><div style="display:flex;gap:4px;align-items:center">';
+rh+='<button class="ord-btn'+(isOrd?' is-ordered':'')+'" onclick="toggleOrdered(\''+r.id+'\',this)">';
 rh+='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="'+(isOrd?'3':'2')+'" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> ';
 rh+=(isOrd?'Ordered':'Order')+'</button>';
 rh+='<a href="https://wa.me/?text='+_waMsg+'" target="_blank" rel="noopener" title="Order via WhatsApp" style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:#25D366;text-decoration:none;font-size:13px;flex-shrink:0;color:#fff">&#x1F4AC;</a>';
-rh+='</td>';
+rh+='</div></td>';
 rh+='</tr>';
 });
 mkTbody("invBody",rh.split("</tr>").filter(Boolean).map(function(x){return x+"</tr>";}));
@@ -5233,6 +5233,7 @@ function loadKenyanDemo(){
   window._invBuilt = false; window._healthBuilt = false; window._piBuilt = false;
   window._catBuilt = false; window._ovBuilt = false;
   buildOv();
+  ovUpdateAiSummary();
   if(window._activeTab===1) { buildInv(); window._invBuilt=true; }
   if(window._activeTab===2) { buildHealth(); window._healthBuilt=true; }
   if(window._activeTab===4) { buildPi(); window._piBuilt=true; }
