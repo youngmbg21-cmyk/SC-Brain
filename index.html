@@ -5398,9 +5398,7 @@ function aiMiniChart(bubble, sku) {
   var vals = PM.map(function (m) { var v = m && m.r != null ? m.r * share : 0; return isFinite(v) ? v : 0; });
   var maxV = Math.max.apply(null, vals) || 1;
 
-  var W = 120, barH = 44, lblH = 14;
-  var barW = W / 12;
-  var gap = 0.8;
+  var W = 120, barH = 44, gap = 0.8, barW = W / 12;
 
   var bars = vals.map(function (v, i) {
     var h = Math.max((v / maxV) * barH, v > 0 ? 2 : 0);
@@ -5411,12 +5409,13 @@ function aiMiniChart(bubble, sku) {
     return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h.toFixed(2)+'" fill="'+fill+'" rx="1.5"/>';
   }).join('');
 
-  var labels = months.map(function (m, i) {
-    var x = ((i + 0.5) * barW).toFixed(2);
-    return '<text x="'+x+'" y="'+(barH + lblH - 2)+'" text-anchor="middle" font-size="6.5" fill="rgba(128,128,128,0.65)" font-family="monospace">'+m+'</text>';
-  }).join('');
+  // Bars-only SVG — no text inside so preserveAspectRatio="none" won't distort labels
+  var svg = '<svg viewBox="0 0 '+W+' '+barH+'" preserveAspectRatio="none" style="display:block;width:100%;height:60px">'+bars+'</svg>';
 
-  var svg = '<svg viewBox="0 0 '+W+' '+(barH + lblH)+'" preserveAspectRatio="none" style="display:block;width:100%;height:80px">'+bars+labels+'</svg>';
+  // Month labels rendered as HTML so they never get stretched
+  var labelRow = '<div style="display:flex;justify-content:space-between;padding:2px 1px 0;line-height:1">'+
+    months.map(function(m){ return '<span style="font-family:var(--font-mono);font-size:8px;color:var(--text3);flex:1;text-align:center">'+m+'</span>'; }).join('')+
+  '</div>';
 
   var wrapper = document.createElement('div');
   wrapper.className = 'aip-minichart';
@@ -5426,7 +5425,7 @@ function aiMiniChart(bubble, sku) {
   wrapper.appendChild(lbl);
   var box = document.createElement('div');
   box.className = 'aip-minichart-box';
-  box.innerHTML = svg;
+  box.innerHTML = svg + labelRow;
   wrapper.appendChild(box);
   bubble.appendChild(wrapper);
 }
