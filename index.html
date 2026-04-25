@@ -233,6 +233,14 @@ tr.row-ordered .ord-btn.is-ordered{opacity:1}
     <a class="nav-item" href="javascript:void(0)" onclick="openSettings()"><span class="nav-icon">⚙️</span>Settings</a>
   </div>
   <input type="file" id="fileUploadInput" accept=".xlsx,.xls,.csv" onchange="handleFileUpload(event)" style="display:none" />
+  <div id="dmBadge" style="margin:0 10px 10px;padding:9px 12px;border-radius:8px;background:var(--surface2);border:1px solid var(--border)">
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+      <span id="dmDot" style="width:6px;height:6px;border-radius:50%;background:var(--text3);flex-shrink:0"></span>
+      <span id="dmLabel" style="font-family:var(--font-mono);font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--text3)">Demo Data</span>
+    </div>
+    <div id="dmSub" style="font-size:10px;color:var(--text3)">200 sample SKUs</div>
+    <button id="dmResetBtn" onclick="clearAppData()" style="display:none;margin-top:6px;width:100%;padding:4px 0;border-radius:4px;border:1px solid var(--border);background:none;font-family:var(--font-mono);font-size:10px;color:var(--text3);cursor:pointer">&#x21A9; Reset to Demo</button>
+  </div>
   <div class="sidebar-footer">
     <div class="theme-toggle">
       <button class="theme-toggle-btn active" id="sb-dark" onclick="setTheme('dark')">🌙 Dark</button>
@@ -948,6 +956,7 @@ function updateSignal(s) {
 
 SKU.forEach(function(s) { updateSignal(s); });
 var dataHealthScore = 100; // % of actual vs estimated data points; updated on user import
+var _dataMode = 'demo'; // 'demo' | 'uploaded'
 // ── End signal recompute ────────────────────────────────────────────────────
 // ── Recompute CAT-level counts from live SKU signals ──────────────────────
 function recomputeCatCounts(){
@@ -5160,14 +5169,16 @@ function handleFileUpload(event){
       var rows = XLSX.utils.sheet_to_json(sheet, {header:1});
       if(!rows || rows.length < 2){ alert('No data found in file. Ensure the sheet has headers: Product, Quantity, Price'); return; }
       var headers = rows[0].map(function(h){ return String(h||'').trim().toLowerCase(); });
-      var nameIdx = headers.indexOf('product');
-      var qtyIdx  = headers.indexOf('quantity');
-      var priceIdx= headers.indexOf('price');
-      if(nameIdx<0){ nameIdx = headers.findIndex(function(h){return h.includes('product')||h.includes('name')||h.includes('item');}); }
-      if(qtyIdx<0) { qtyIdx  = headers.findIndex(function(h){return h.includes('qty')||h.includes('quantity')||h.includes('stock');}); }
-      if(priceIdx<0){ priceIdx= headers.findIndex(function(h){return h.includes('price')||h.includes('cost')||h.includes('ksh');}); }
+      // SME Mapping Engine — English + Swahili column synonyms
+      var _N = ['product','name','item','description','desc','sku','mali','bidhaa','jina','jina la bidhaa'];
+      var _Q = ['quantity','qty','stock','units','available','on hand','stock on hand','kiasi','idadi','hisa','stk'];
+      var _P = ['price','cost','ksh','unit price','selling price','unit cost','bei','gharama','thamani','rate'];
+      function _mh(hs,syns){ for(var j=0;j<syns.length;j++){var x=hs.indexOf(syns[j]);if(x>=0)return x;} return hs.findIndex(function(h){return syns.some(function(s){return h.includes(s);});}); }
+      var nameIdx  = _mh(headers, _N);
+      var qtyIdx   = _mh(headers, _Q);
+      var priceIdx = _mh(headers, _P);
       if(nameIdx<0||qtyIdx<0||priceIdx<0){
-        alert('Could not find required columns. Please ensure your file has: Product, Quantity, Price columns.');
+        alert('Could not map columns.\n\nExpected (English or Swahili):\n  Product / Mali / Bidhaa\n  Quantity / Kiasi / Idadi\n  Price / Bei / Gharama\n\nFound: '+headers.join(', '));
         return;
       }
       var imported=[];
@@ -5220,12 +5231,35 @@ function _applyImportedData(rows){
   });
   var _tot = _actPts + _estPts;
   dataHealthScore = _tot > 0 ? Math.round((_actPts / _tot) * 100) : 100;
+  _dataMode = 'uploaded';
+  dmUpdateBadge(rows.length + ' products');
   recomputeCatCounts();
   // Rebuild all tabs
   window._invBuilt = false; window._healthBuilt = false; window._piBuilt = false;
   window._catBuilt = false; window._ovBuilt = false;
   buildOv();
   if(window._activeTab===1) { buildInv(); window._invBuilt=true; }
+}
+
+function dmUpdateBadge(info) {
+  var dot = document.getElementById('dmDot');
+  var lbl = document.getElementById('dmLabel');
+  var sub = document.getElementById('dmSub');
+  var btn = document.getElementById('dmResetBtn');
+  if(!dot) return;
+  if(_dataMode === 'uploaded') {
+    dot.style.background = 'var(--ok)';
+    lbl.style.color = 'var(--ok)';
+    lbl.textContent = 'Live Data';
+    sub.textContent = info || 'Uploaded';
+    if(btn) btn.style.display = 'block';
+  } else {
+    dot.style.background = 'var(--text3)';
+    lbl.style.color = 'var(--text3)';
+    lbl.textContent = 'Demo Data';
+    sub.textContent = '200 sample SKUs';
+    if(btn) btn.style.display = 'none';
+  }
 }
 
 function showImportBanner(msg, type){
@@ -5365,6 +5399,9 @@ function clearAppData(){
   window._invBuilt=false; window._healthBuilt=false; window._piBuilt=false;
   window._catBuilt=false; window._ovBuilt=false;
   buildOv();
+  dataHealthScore = 100;
+  _dataMode = 'demo';
+  dmUpdateBadge();
   showImportBanner('\u2713 Data reset to original state.', 'ok');
 }
 </script>
