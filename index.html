@@ -203,6 +203,26 @@ tr.row-ordered .ord-btn.is-ordered{opacity:1}
 .hz-cat-sep{height:5px;background:var(--surface2);border-bottom:1px solid var(--border)}
 @media(max-width:900px){.hz-cards{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:600px){.hz-cards{grid-template-columns:repeat(2,1fr)}.hz-flat-header,.hz-flat-row{grid-template-columns:100px 1fr 50px 90px}}
+/* ── Mobile layout ── */
+#mobileNav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:var(--nav-bg);border-top:1px solid var(--border);padding:4px 2px;padding-bottom:max(4px,env(safe-area-inset-bottom))}
+.mn-inner{display:flex;gap:0}
+.mn-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 2px;border:none;background:none;color:var(--text3);font-size:17px;cursor:pointer;border-radius:8px;transition:color .15s;-webkit-tap-highlight-color:transparent}
+.mn-lbl{font-family:var(--font-mono);font-size:8px;letter-spacing:.02em;color:var(--text3);line-height:1;transition:color .15s}
+.mn-btn.mn-active,.mn-btn.mn-active .mn-lbl{color:var(--accent)}
+.mn-badge{display:inline-block;font-size:7px;background:var(--danger);color:#fff;padding:0 3px;border-radius:5px;margin-left:1px;vertical-align:middle}
+@media(max-width:900px){
+  #mobileNav{display:block}
+  .main{margin-left:0!important;padding-bottom:74px}
+  #chatPanel{width:min(460px,100vw)!important}
+  #chatFab{bottom:82px}
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
+  .page{padding:14px}
+}
+@media(max-width:480px){
+  .kpi-row,.q-grid,.kpi4{grid-template-columns:1fr 1fr}
+  .page{padding:10px}
+  .dt thead th,.dt td{padding:8px 8px}
+}
 </style>
 </head>
 <body>
@@ -387,6 +407,7 @@ tr.row-ordered .ord-btn.is-ordered{opacity:1}
               <option value="hR-d">Revenue</option>
               <option value="doc-a">Days cover</option>
               <option value="stk-a">Stock</option>
+              <option value="cfp-d">Cash Priority</option>
             </select>
             <div style="margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--text2)" id="invCnt"></div><span id="orderedBadge" style="display:none;font-family:var(--font-mono);font-size:10px;font-weight:600;padding:2px 9px;border-radius:10px;background:var(--ok-pale);color:var(--ok);margin-left:8px;align-items:center;gap:4px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span></span></span>
           </div>
@@ -830,6 +851,15 @@ tr.row-ordered .ord-btn.is-ordered{opacity:1}
   </div><!-- /page -->
 </div><!-- /main -->
 </div><!-- /app -->
+<div id="mobileNav">
+  <div class="mn-inner">
+    <button class="mn-btn mn-active" id="mn0" onclick="showTab(0);syncNav(0);mnSync(0)">⬛<span class="mn-lbl">Overview</span></button>
+    <button class="mn-btn" id="mn1" onclick="showTab(1);syncNav(1);mnSync(1)">⚠️<span class="mn-lbl">Alerts<span class="mn-badge" id="mn-badge">178</span></span></button>
+    <button class="mn-btn" id="mn2" onclick="showTab(2);syncNav(2);mnSync(2)">💰<span class="mn-lbl">Dead Stock</span></button>
+    <button class="mn-btn" id="mn4" onclick="showTab(4);syncNav(4);mnSync(4)">🎯<span class="mn-lbl">Cash Flow</span></button>
+    <button class="mn-btn" id="mn5" onclick="showTab(5);syncNav(5);mnSync(5)">📦<span class="mn-lbl">Categories</span></button>
+  </div>
+</div>
 
 
 
@@ -937,6 +967,8 @@ function updateSignal(s) {
 
   // L12M approximation for SKU-level historical revenue
   s.hL12 = Math.round(s.hR * (12/37));
+  // Cash Flow Priority: monthly revenue per day of lead time
+  s.cfp = s.lt > 0 ? (s.fR / 12) / s.lt : 0;
 
   // 5. Signal — ROP takes priority, then DoC thresholds
   if (s.rop !== null && s.stk <= s.rop) {
@@ -1268,6 +1300,8 @@ var lostKr=SKU.filter(function(s){return s.sig==="REORDER NOW";}).reduce(functio
 PORT.rNow=rn; PORT.rSoon=rs; PORT.watch=wt; PORT.ok=ok;
 var _nb=document.getElementById('nb-inv');
 if(_nb) _nb.textContent=rn;
+var _mnb=document.getElementById('mn-badge');
+if(_mnb) _mnb.textContent=rn;
 var _tb=document.querySelector('.tab-badge.rd');
 if(_tb) _tb.textContent=rn;
 var _ob=document.getElementById('ovAlertBadge');
@@ -4913,6 +4947,12 @@ function syncNav(idx){
   var t=document.documentElement.getAttribute('data-theme')||'dark';
   var sd=document.getElementById('sb-dark'); if(sd) sd.classList.toggle('active',t==='dark');
   var sl=document.getElementById('sb-light'); if(sl) sl.classList.toggle('active',t==='light');
+}
+function mnSync(idx) {
+  [0,1,2,4,5].forEach(function(n){
+    var btn = document.getElementById('mn'+n);
+    if(btn) btn.classList.toggle('mn-active', n === idx);
+  });
 }
 // Init sidebar theme toggle state on load
 document.addEventListener('DOMContentLoaded',function(){
