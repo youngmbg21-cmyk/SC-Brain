@@ -5416,7 +5416,7 @@ function aiMiniChart(bubble, sku) {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { return 'KSh ' + c.parsed.y.toFixed(2) + 'M'; } } } },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { return c.parsed && c.parsed.y != null ? 'KSh ' + c.parsed.y.toFixed(2) + 'M' : ''; } } } },
         scales: {
           x: { ticks: { font: { size: 8 }, color: tickColor, maxRotation: 0 }, grid: { display: false } },
           y: { display: false, grid: { display: false } }
