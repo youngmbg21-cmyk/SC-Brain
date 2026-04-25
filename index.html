@@ -5399,11 +5399,15 @@ function aiMiniChart(bubble, sku) {
   box.className = 'aip-minichart-box';
   var canvas = document.createElement('canvas');
   canvas.id = cid;
-  canvas.style.cssText = 'display:block;width:100%;height:100%';
+  canvas.width = 0;
+  canvas.height = 88;
+  canvas.style.cssText = 'display:block;width:100%;height:88px';
   box.appendChild(canvas);
   wrapper.appendChild(box);
   bubble.appendChild(wrapper);
   setTimeout(function () {
+    canvas.width = box.clientWidth || 320;
+    canvas.height = 88;
     var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     var share = PORT.fRev > 0 ? sku.fR / PORT.fRev : 0;
     var vals = PM.map(function (m) { var v = m && m.r != null ? m.r * share : 0; return isFinite(v) ? +v.toFixed(2) : 0; });
@@ -5415,9 +5419,9 @@ function aiMiniChart(bubble, sku) {
       type: 'bar',
       data: { labels: months, datasets: [{ data: vals, backgroundColor: colors, borderRadius: 3, borderSkipped: false, barPercentage: 0.75 }] },
       options: {
-        responsive: true,
+        responsive: false,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { try { return typeof c.parsed.y === 'number' ? 'KSh ' + c.parsed.y.toFixed(2) + 'M' : ''; } catch(e) { return ''; } } } } },
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
         scales: {
           x: { ticks: { font: { size: 8 }, color: tickColor, maxRotation: 0 }, grid: { display: false } },
           y: { display: false, grid: { display: false } }
