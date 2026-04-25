@@ -4242,16 +4242,30 @@ function chatBuildSystemPrompt() {
     .sort(function(a,b){return b.fR-a.fR;}).slice(0,5)
     .map(function(s){return '  '+s.id+' '+s.n+' ('+s.cat+'): doc='+(s.doc!==null?s.doc+'d':'null')+', rop='+(s.rop!==null?s.rop.toLocaleString()+' units':'null')+', stk='+s.stk.toLocaleString()+', lt='+s.lt+'d, class='+s.axyz;})
     .join('\n');
+  // Cash at risk: monthly revenue equivalent of all REORDER NOW SKUs
+  var cashAtRisk = SKU.filter(function(s){return s.sig==='REORDER NOW';})
+    .reduce(function(acc,s){return acc+(s.fR||0)/12;},0);
+  var carStr = cashAtRisk>1000000 ? (cashAtRisk/1000000).toFixed(1)+'M' : Math.round(cashAtRisk/1000)+'K';
+  // Top Cash Flow Priority items (revenue per day of lead time) among non-OK SKUs
+  var cfpTop = SKU.slice()
+    .filter(function(s){return s.lt>0&&s.adq3>0&&s.sig!=='OK';})
+    .map(function(s){return {id:s.id,n:s.n,cfp:(s.fR||0)/12/(s.lt||1),lt:s.lt};})
+    .sort(function(a,b){return b.cfp-a.cfp;}).slice(0,3)
+    .map(function(s){return '  '+s.id+' '+s.n+': KSh '+Math.round(s.cfp)+'/day (lt='+s.lt+'d)';})
+    .join('\n');
+  var activeTabEl = document.querySelector('.nav-item.active');
+  var activeTab = activeTabEl ? activeTabEl.textContent.trim() : 'Overview';
   return 'You are SC Brian, the AI supply chain advisor. Today is '+new Date().toLocaleDateString('en-SE',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'.\n\n'+
     'PORTFOLIO:\n'+
     '- SKUs: '+SKU.length+' across '+CAT.length+' categories\n'+
     '- Last 12M Revenue: KSh '+histRevM+'M | 12-Month Forecast: KSh '+fRevM+'M | YoY: +'+yoyAvg+'%\n'+
     '- Signals: '+rNowLive+' REORDER NOW, '+rSoonLive+' REORDER SOON, '+watchLive+' WATCH, '+okLive+' OK\n'+
+    '- Cash at Risk (stockouts): KSh '+carStr+'/month\n'+
     '- Cash Cows (AX): '+cowsLive+' SKUs'+ovLine+
     (dataHealthScore < 100 ? '\n- Data Health: '+dataHealthScore+'% actual ('+Math.round(100-dataHealthScore)+'% of imported qty/price fields estimated — treat cost and coverage signals as directional)' : '')+
-    '\n\n'+
+    '\n- User is currently viewing: '+activeTab+'\n\n'+
     'SIGNAL LOGIC: ROP-first. REORDER NOW if stk<=rop OR doc<lt. Safety buffer: X=7d, Y=3d, Z=0d.\n\n'+
-    'CATEGORIES:\n'+catLines+'\n\nTOP ALERTS:\n'+topAlerts+'\n\n'+
+    'CATEGORIES:\n'+catLines+'\n\nTOP ALERTS:\n'+topAlerts+'\n\nCASH FLOW PRIORITY (top reorder ROI):\n'+cfpTop+'\n\n'+
     'CHARTS: Whenever you mention a specific SKU by its ID (e.g. FITN-0087, SKIN-0034), the app automatically renders a 12-month forecast bar chart for it beneath your reply. You do NOT need to describe or explain charts — just mention the SKU ID naturally in your response and the chart appears. Never say you cannot display graphs.\n\n'+
     (_aiMode === 'simple'
       ? 'TONE: Simple mode. Speak in plain, everyday English — no jargon. Imagine explaining to a shop owner who is not a supply chain professional. Use short sentences, practical advice, and clear next steps. If you must use a technical term, explain it in plain English first. Start with the most important action the owner should take.'
@@ -4388,11 +4402,14 @@ function chatShowWelcome() {
 function chatUpdateContextPill() {
   // Update live counts in context bar
   var _rn = SKU.filter(function(s){ return s.sig==='REORDER NOW'; }).length;
+  var _car = SKU.filter(function(s){return s.sig==='REORDER NOW';})
+    .reduce(function(acc,s){return acc+(s.fR||0)/12;},0);
+  var _carStr = _car>1000000 ? ((_car/1000000).toFixed(1)+'M') : (Math.round(_car/1000)+'K');
   var _sp = document.getElementById('ctxSkuPill');
   var _ap = document.getElementById('ctxAlertPill');
   var _rp = document.getElementById('ctxRevPill');
   if(_sp) _sp.textContent = '📦 ' + SKU.length + ' SKUs';
-  if(_ap) _ap.textContent = '⚠️ ' + _rn + ' alerts';
+  if(_ap) _ap.textContent = '⚠️ ' + _rn + ' alerts · KSh ' + _carStr + ' at risk';
   if(_rp) _rp.textContent = '📊 KSh ' + PORT_L12M.toFixed(1) + 'M L12M';
   var pill = document.getElementById('ctxFilterPill');
   if(!pill) return;
@@ -4587,6 +4604,11 @@ function chatCreateStreamBubble(isMarket, providerName) {
   textDiv.className = 'stream-text';
   bubble.appendChild(textDiv);
 
+  // Stable container for charts — isolated from text so innerHTML updates never destroy chart nodes
+  var chartsDiv = document.createElement('div');
+  chartsDiv.className = 'stream-charts';
+  bubble.appendChild(chartsDiv);
+
   // Blinking cursor
   var cursor = document.createElement('span');
   cursor.style.cssText='display:inline-flex;gap:3px;padding:4px 0;align-items:center';
@@ -4598,7 +4620,7 @@ function chatCreateStreamBubble(isMarket, providerName) {
   container.appendChild(div);
   div.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-  return { bubble, textDiv, cursor, container, msgDiv: div };
+  return { bubble, textDiv, chartsDiv, cursor, container, msgDiv: div };
 }
 
 function chatFinaliseStream(streamEl, fullText) {
@@ -5481,7 +5503,8 @@ function aiParseForWA(bubble, text) {
 }
 
 // Mini-chart for SKU 12-month forecast
-function aiParseForCharts(bubble, text) {
+function aiParseForCharts(bubble, text, chartsDiv) {
+  var target = chartsDiv || bubble;
   var skuRe = /\b([A-Z]{2,6}-\d{3,4})\b/g;
   var match;
   var shown = {};
@@ -5491,7 +5514,7 @@ function aiParseForCharts(bubble, text) {
     var sku = SKU.find(function (s) { return s.id === skuId; });
     if (!sku) continue;
     shown[skuId] = true;
-    aiMiniChart(bubble, sku);
+    aiMiniChart(target, sku);
   }
 }
 
@@ -5540,7 +5563,7 @@ chatFinaliseStream = function (streamEl, fullText) {
   _origChatFinaliseStream(streamEl, fullText);
   if (streamEl && streamEl.bubble) {
     aiParseForWA(streamEl.bubble, fullText);
-    aiParseForCharts(streamEl.bubble, fullText);
+    aiParseForCharts(streamEl.bubble, fullText, streamEl.chartsDiv);
   }
 };
 
