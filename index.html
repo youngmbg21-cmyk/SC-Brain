@@ -3966,8 +3966,8 @@ document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeSetti
 .aip-send:hover{opacity:.85}
 .aip-wa-btn{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:5px 11px;border-radius:8px;background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.3);color:#25d366;font-family:var(--font-mono);font-size:9px;cursor:pointer;text-decoration:none;transition:all .15s}
 .aip-wa-btn:hover{background:rgba(37,211,102,0.2)}
-.aip-minichart{margin-top:8px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;height:100px}
-.aip-minichart canvas{display:block;width:100%!important;height:80px!important}
+.aip-minichart{margin-top:8px;padding:6px 6px 4px;background:var(--surface);border:1px solid var(--border);border-radius:8px}
+.aip-minichart-box{position:relative;height:88px;width:100%}
 @keyframes chatSlideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 .stream-cursor{font-size:12px;color:var(--accent);animation:blink .7s ease-in-out infinite;margin-left:1px}
@@ -5395,32 +5395,34 @@ function aiMiniChart(bubble, sku) {
   lbl.style.cssText = 'font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em';
   lbl.textContent = sku.id + ' · 12-Month Forecast';
   wrapper.appendChild(lbl);
+  var box = document.createElement('div');
+  box.className = 'aip-minichart-box';
   var canvas = document.createElement('canvas');
   canvas.id = cid;
-  wrapper.appendChild(canvas);
+  box.appendChild(canvas);
+  wrapper.appendChild(box);
   bubble.appendChild(wrapper);
   setTimeout(function () {
     var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     var share = PORT.fRev > 0 ? sku.fR / PORT.fRev : 0;
     var vals = PM.map(function (m) { return +(m.r * share).toFixed(2); });
     var maxV = Math.max.apply(null, vals);
-    var colors = vals.map(function (v) { return v >= maxV * 0.88 ? 'rgba(251,191,36,0.85)' : 'rgba(61,184,189,0.65)'; });
+    var colors = vals.map(function (v) { return v >= maxV * 0.88 ? 'rgba(251,191,36,0.9)' : 'rgba(61,184,189,0.7)'; });
     var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    var tickColor = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)';
+    var tickColor = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
     var inst = new Chart(canvas, {
       type: 'bar',
-      data: { labels: months, datasets: [{ data: vals, backgroundColor: colors, borderRadius: 3, borderSkipped: false }] },
+      data: { labels: months, datasets: [{ data: vals, backgroundColor: colors, borderRadius: 3, borderSkipped: false, barPercentage: 0.75 }] },
       options: {
-        responsive: false,
+        responsive: true,
+        maintainAspectRatio: false,
         plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { return 'KSh ' + c.parsed.y.toFixed(2) + 'M'; } } } },
         scales: {
-          x: { ticks: { font: { size: 8 }, color: tickColor }, grid: { display: false } },
-          y: { display: false }
+          x: { ticks: { font: { size: 8 }, color: tickColor, maxRotation: 0 }, grid: { display: false } },
+          y: { display: false, grid: { display: false } }
         }
       }
     });
-    canvas.style.width = '100%';
-    canvas.style.height = '80px';
     if (window._chartInsts) _chartInsts.push(inst);
   }, 80);
 }
