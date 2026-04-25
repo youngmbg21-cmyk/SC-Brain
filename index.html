@@ -3967,7 +3967,7 @@ document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeSetti
 .aip-wa-btn{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:5px 11px;border-radius:8px;background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.3);color:#25d366;font-family:var(--font-mono);font-size:9px;cursor:pointer;text-decoration:none;transition:all .15s}
 .aip-wa-btn:hover{background:rgba(37,211,102,0.2)}
 .aip-minichart{margin-top:8px;padding:6px 6px 4px;background:var(--surface);border:1px solid var(--border);border-radius:8px}
-.aip-minichart-box{position:relative;height:88px;width:100%}
+.aip-minichart-box{position:relative;height:88px;width:100%;overflow:hidden}
 @keyframes chatSlideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 .stream-cursor{font-size:12px;color:var(--accent);animation:blink .7s ease-in-out infinite;margin-left:1px}
@@ -4383,7 +4383,7 @@ function chatAppendMessage(role, content, isMarket) {
   div.appendChild(meta);
   div.appendChild(bubble);
   container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
+  div.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   // No history tracking — fresh context per message
 }
@@ -4525,16 +4525,16 @@ function chatCreateStreamBubble(isMarket, providerName) {
   div.appendChild(meta);
   div.appendChild(bubble);
   container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
+  div.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-  return { bubble, textDiv, cursor, container };
+  return { bubble, textDiv, cursor, container, msgDiv: div };
 }
 
 function chatFinaliseStream(streamEl, fullText) {
   if(!streamEl) return;
   try{ if(streamEl.cursor) streamEl.cursor.remove(); }catch(e){}
   streamEl.textDiv.innerHTML = renderChatMarkdown(fullText);
-  streamEl.container.scrollTop = streamEl.container.scrollHeight;
+  if(streamEl.msgDiv) streamEl.msgDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ── STREAMING API CALLS ───────────────────────────────────────────────────────
@@ -5399,6 +5399,7 @@ function aiMiniChart(bubble, sku) {
   box.className = 'aip-minichart-box';
   var canvas = document.createElement('canvas');
   canvas.id = cid;
+  canvas.style.cssText = 'display:block;width:100%;height:100%';
   box.appendChild(canvas);
   wrapper.appendChild(box);
   bubble.appendChild(wrapper);
