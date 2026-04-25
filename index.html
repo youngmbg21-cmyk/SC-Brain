@@ -3911,7 +3911,7 @@ document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeSetti
     </div>
     <div class="aip-header-right">
       <div class="aip-mode-toggle">
-        <button class="aip-mode-btn active" id="aiModeCompact" onclick="aiSetMode('compact')">Compact</button>
+        <button class="aip-mode-btn active" id="aiModeSimple" onclick="aiSetMode('simple')">Simple</button>
         <button class="aip-mode-btn" id="aiModeExpert" onclick="aiSetMode('expert')">Expert</button>
       </div>
       <button class="aip-icon-btn" id="chatExpandBtn" onclick="chatToggleExpand()" title="Expand">&#x2922;</button>
@@ -4185,7 +4185,11 @@ function chatBuildSystemPrompt() {
     '- Signals: '+rNowLive+' REORDER NOW, '+rSoonLive+' REORDER SOON, '+watchLive+' WATCH, '+okLive+' OK\n'+
     '- Cash Cows (AX): '+cowsLive+' SKUs'+ovLine+'\n\n'+
     'SIGNAL LOGIC: ROP-first. REORDER NOW if stk<=rop OR doc<lt. Safety buffer: X=7d, Y=3d, Z=0d.\n\n'+
-    'CATEGORIES:\n'+catLines+'\n\nTOP ALERTS:\n'+topAlerts+'\n\nAnswer concisely. Use KSh (Kenyan Shillings) for currency. Write with Kenyan SME context.';
+    'CATEGORIES:\n'+catLines+'\n\nTOP ALERTS:\n'+topAlerts+'\n\n'+
+    (_aiMode === 'simple'
+      ? 'TONE: Simple mode. Speak in plain, everyday English — no jargon. Imagine explaining to a shop owner who is not a supply chain professional. Use short sentences, practical advice, and clear next steps. If you must use a technical term, explain it in plain English first. Start with the most important action the owner should take.'
+      : 'TONE: Expert mode. Use precise supply chain terminology (ROP, DOC, ABC/XYZ, coverage, lead time, etc.). Include metrics, class breakdowns, and data-driven analysis. Be concise but thorough.'
+    )+'\n\nUse KSh (Kenyan Shillings) for currency. Write with Kenyan SME context.';
 }
 
 function chatGetDefaultProvider(){ try{ return localStorage.getItem('scb-chat-default')||''; }catch(e){ return ''; } }
@@ -5302,7 +5306,7 @@ function clearAppData(){
 // ── SC BRIAN AI CONTROLLER ────────────────────────────────────────────────────
 var _aiOpen = false;
 var _aiExpanded = false;
-var _aiMode = 'compact';
+var _aiMode = 'simple';
 var _aiWelcomeShown = false;
 var _aiMiniChartId = 0;
 
@@ -5312,7 +5316,7 @@ function aiOpen() {
   _aiOpen = true;
   document.getElementById('chatPanel').classList.add('ai-open');
   document.getElementById('aiBackdrop').classList.add('ai-open');
-  document.getElementById('chatFabIcon').textContent = '✕';
+  document.getElementById('chatFab').style.display = 'none';
   chatUpdateContextPill();
   if (typeof chatInitProviderDropdown === 'function') chatInitProviderDropdown();
   if (!_aiWelcomeShown) { chatShowWelcome(); _aiWelcomeShown = true; }
@@ -5323,12 +5327,12 @@ function aiClose() {
   _aiOpen = false;
   document.getElementById('chatPanel').classList.remove('ai-open');
   document.getElementById('aiBackdrop').classList.remove('ai-open');
-  document.getElementById('chatFabIcon').textContent = '🤖';
+  document.getElementById('chatFab').style.display = '';
 }
 
 function aiSetMode(mode) {
   _aiMode = mode;
-  document.getElementById('aiModeCompact').classList.toggle('active', mode === 'compact');
+  document.getElementById('aiModeSimple').classList.toggle('active', mode === 'simple');
   document.getElementById('aiModeExpert').classList.toggle('active', mode === 'expert');
 }
 
