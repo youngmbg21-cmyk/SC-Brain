@@ -4186,6 +4186,7 @@ function chatBuildSystemPrompt() {
     '- Cash Cows (AX): '+cowsLive+' SKUs'+ovLine+'\n\n'+
     'SIGNAL LOGIC: ROP-first. REORDER NOW if stk<=rop OR doc<lt. Safety buffer: X=7d, Y=3d, Z=0d.\n\n'+
     'CATEGORIES:\n'+catLines+'\n\nTOP ALERTS:\n'+topAlerts+'\n\n'+
+    'CHARTS: Whenever you mention a specific SKU by its ID (e.g. FITN-0087, SKIN-0034), the app automatically renders a 12-month forecast bar chart for it beneath your reply. You do NOT need to describe or explain charts — just mention the SKU ID naturally in your response and the chart appears. Never say you cannot display graphs.\n\n'+
     (_aiMode === 'simple'
       ? 'TONE: Simple mode. Speak in plain, everyday English — no jargon. Imagine explaining to a shop owner who is not a supply chain professional. Use short sentences, practical advice, and clear next steps. If you must use a technical term, explain it in plain English first. Start with the most important action the owner should take.'
       : 'TONE: Expert mode. Use precise supply chain terminology (ROP, DOC, ABC/XYZ, coverage, lead time, etc.). Include metrics, class breakdowns, and data-driven analysis. Be concise but thorough.'
