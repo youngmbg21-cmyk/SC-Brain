@@ -145,6 +145,28 @@ tr.row-ordered .ord-btn.is-ordered{opacity:1}
 .ov-matrix-tip::before{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);
   margin-top:-1px;border:6px solid transparent;border-top-color:var(--surface)}
 /* ── END Overview matrix tooltips ───────────────────────────────────────── */
+/* ── Run Analysis ───────────────────────────────────────────────────────── */
+.ova-run-btn{font-family:var(--font-display);font-size:13px;font-weight:700;padding:10px 28px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),#5b21b6);color:#fff;cursor:pointer;white-space:nowrap;box-shadow:0 4px 18px rgba(61,184,189,0.35);transition:opacity .15s,transform .15s}
+.ova-run-btn:hover{opacity:.88;transform:translateY(-1px)}
+.ova-run-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.ova-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);display:flex;flex-direction:column}
+.ova-box.ova-accent{border-top:3px solid var(--accent)}
+.ova-box.ova-ok{border-top:3px solid var(--ok)}
+.ova-box.ova-danger{border-top:3px solid var(--danger)}
+.ova-box.ova-warn{border-top:3px solid var(--warn)}
+.ova-skeleton{padding:40px 20px;text-align:center;color:var(--text3);font-family:var(--font-mono);font-size:11px;line-height:1.7}
+.ova-loading{display:flex;flex-direction:column;gap:10px;padding:20px}
+.ova-skel-line{height:11px;border-radius:4px;background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:ovaSkelShimmer 1.4s ease-in-out infinite}
+@keyframes ovaSkelShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.ova-takeaway{padding:11px 16px;display:flex;align-items:flex-start;gap:10px;border-bottom:1px solid var(--border)}
+.ova-takeaway-tag{font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;flex-shrink:0;margin-top:2px}
+.ova-takeaway-text{font-size:12.5px;color:var(--text);line-height:1.5;font-weight:500}
+.ova-bullets{padding:14px 16px 10px;flex:1}
+.ova-bullets ul{margin:0;padding-left:16px;list-style:disc}
+.ova-bullets li{font-size:12px;line-height:1.6;margin:5px 0;color:var(--text)}
+.ova-bottom{padding:9px 16px;border-top:1px solid var(--border);display:flex;align-items:flex-start;gap:8px}
+.ova-bottom-tag{font-family:var(--font-mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;flex-shrink:0;margin-top:2px}
+.ova-bottom-text{font-size:11.5px;color:var(--text2);font-style:italic;line-height:1.5}
 
 
 /* ── PI Tab consistent heights ───────────────────────────────────────────── */
@@ -302,6 +324,31 @@ tr.row-ordered .ord-btn.is-ordered{opacity:1}
               <div class="panel-sub">Average across all SKUs</div>
             </div>
             <div class="panel-body" style="padding:10px 18px" id="ovYoy"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ RUN ANALYSIS ═══ -->
+      <div style="margin-top:28px">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <button id="ovAnalysisBtn" onclick="runOvAnalysis()" class="ova-run-btn">
+            ⚡ Run Analysis
+          </button>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+        <div id="ovAnalysisGrid" style="display:none;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px">
+          <div class="ova-box ova-accent" id="ovA-overview">
+            <div class="ova-skeleton">Click <strong>Run Analysis</strong> to generate insights.</div>
+          </div>
+          <div class="ova-box ova-ok" id="ovA-well">
+            <div class="ova-skeleton">Click <strong>Run Analysis</strong> to generate insights.</div>
+          </div>
+          <div class="ova-box ova-danger" id="ovA-concerns">
+            <div class="ova-skeleton">Click <strong>Run Analysis</strong> to generate insights.</div>
+          </div>
+          <div class="ova-box ova-warn" id="ovA-recs">
+            <div class="ova-skeleton">Click <strong>Run Analysis</strong> to generate insights.</div>
           </div>
         </div>
       </div>
@@ -5463,6 +5510,159 @@ chatAppendMessage = function (role, content, isMarket) {
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && _aiOpen) aiClose();
 });
+</script>
+
+<script>
+// ── Overview Run Analysis ────────────────────────────────────────────────────
+
+function runOvAnalysis() {
+  var pid = null;
+  var order = ['claude','openai','perplexity'];
+  for (var i = 0; i < order.length; i++) {
+    if (chatGetKey(order[i]).length > 3) { pid = order[i]; break; }
+  }
+  if (!pid) {
+    alert('No AI API key configured. Go to Settings → AI APIs.');
+    return;
+  }
+
+  var btn = document.getElementById('ovAnalysisBtn');
+  var grid = document.getElementById('ovAnalysisGrid');
+  if (btn) { btn.disabled = true; btn.textContent = 'Analysing…'; }
+  if (grid) grid.style.display = 'grid';
+
+  var boxes = ['ovA-overview','ovA-well','ovA-concerns','ovA-recs'];
+  boxes.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = '<div class="ova-loading">'
+      + '<div class="ova-skel-line" style="width:60%"></div>'
+      + '<div class="ova-skel-line" style="width:90%"></div>'
+      + '<div class="ova-skel-line" style="width:80%"></div>'
+      + '<div class="ova-skel-line" style="width:95%"></div>'
+      + '<div class="ova-skel-line" style="width:70%"></div>'
+      + '<div class="ova-skel-line" style="width:85%"></div>'
+      + '</div>';
+  });
+
+  setTimeout(function(){
+    if(grid) grid.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 80);
+
+  // Build data context
+  var rNow  = SKU.filter(function(s){ return s.sig==='REORDER NOW';  }).length;
+  var rSoon = SKU.filter(function(s){ return s.sig==='REORDER SOON'; }).length;
+  var watch = SKU.filter(function(s){ return s.sig==='WATCH';        }).length;
+  var okCnt = SKU.filter(function(s){ return s.sig==='OK';           }).length;
+  var cows  = SKU.filter(function(s){ return s.cow;                  }).length;
+  var yoyAvg = (SKU.reduce(function(a,s){ return a+(s.yoy||0); },0)/SKU.length).toFixed(1);
+  var topRN = SKU.filter(function(s){ return s.sig==='REORDER NOW'; })
+    .sort(function(a,b){ return b.fR-a.fR; }).slice(0,6)
+    .map(function(s){ return s.id+' '+s.n+' (DOC:'+(s.doc!=null?s.doc+'d':'?')+', stk:'+s.stk.toLocaleString()+', ROP:'+(s.rop?s.rop.toLocaleString():'?')+', class:'+s.axyz+')'; })
+    .join('; ');
+  var catSummary = CAT.map(function(c){
+    var catRN = SKU.filter(function(s){ return s.cat===c.cat&&s.sig==='REORDER NOW'; }).length;
+    return (CN[c.cat]||c.cat)+': KSh '+c.fR.toFixed(2)+'M forecast, YoY '+c.yoy+'%, '+catRN+' critical alerts, '+c.cows+' cash cows';
+  }).join(' | ');
+
+  var dataCtx = 'Portfolio: '+SKU.length+' SKUs across '+CAT.length+' categories. '
+    +'Last 12 months revenue: KSh '+PORT_L12M.toFixed(1)+'M. '
+    +'12-month forecast: KSh '+(PORT.fRev/1000000).toFixed(1)+'M. '
+    +'Average year-on-year growth: +'+yoyAvg+'%. '
+    +'Inventory signals: '+rNow+' REORDER NOW (critical stockout risk), '+rSoon+' REORDER SOON, '+watch+' WATCH, '+okCnt+' OK. '
+    +'Cash cow SKUs (AX class — high revenue, stable demand): '+cows+'. '
+    +'Top critical alerts: '+topRN+'. '
+    +'Category breakdown: '+catSummary+'.';
+
+  var sys = 'You are SC Brian, a supply chain advisor for a Kenyan SME. '
+    +'Return ONLY a raw JSON object — no markdown fences, no explanation, no text before or after. '
+    +'The JSON must have exactly four keys: overview, going_well, concerns, recommendations. '
+    +'Each key maps to an object with: takeaway (1 sentence), bullets (array of exactly 5 strings), bottom_line (1 sentence). '
+    +'Rules: Each section must total 220-230 words. '
+    +'Wrap key numbers and terms in **double asterisks** for highlighting. '
+    +'Use plain English — explain like speaking to a shop owner, not a supply chain expert. '
+    +'For recommendations, start each bullet with a number and bold the first action word (e.g. **1. Call** your supplier...). '
+    +'Use KSh for currency. Kenya SME business context throughout.';
+
+  var userMsg = 'Analyse this supply chain portfolio and return the 4-section JSON analysis:\n\n' + dataCtx;
+
+  var c = CHAT_API_MAP[pid];
+  var k = chatGetKey(pid);
+  var headers, body;
+  if (c.auth === 'anthropic') {
+    headers = {'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
+    body = JSON.stringify({model:c.model, max_tokens:3500, system:sys, messages:[{role:'user',content:userMsg}]});
+  } else {
+    headers = {'Content-Type':'application/json','Authorization':'Bearer '+k};
+    body = JSON.stringify({model:c.model, max_tokens:3500, messages:[{role:'system',content:sys},{role:'user',content:userMsg}]});
+  }
+
+  fetch(c.url, {method:'POST', headers:headers, body:body})
+    .then(function(res){ return res.json(); })
+    .then(function(d) {
+      var raw = '';
+      if (c.auth === 'anthropic') {
+        var blk = d.content && d.content.find(function(b){ return b.type==='text'; });
+        raw = blk ? blk.text : '';
+      } else {
+        raw = d.choices && d.choices[0] && d.choices[0].message ? d.choices[0].message.content : '';
+      }
+      if (!raw) throw new Error('Empty response from AI');
+      raw = raw.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/\s*```$/,'').trim();
+      var data = JSON.parse(raw);
+      ovRenderAnalysis(data);
+    })
+    .catch(function(e) {
+      boxes.forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.innerHTML = '<div style="padding:30px 20px;text-align:center;color:var(--danger);font-size:12px">'
+          +'Analysis failed: '+e.message+'<br><span style="color:var(--text3);font-size:11px">Check your API key in Settings</span></div>';
+      });
+    })
+    .finally(function(){
+      if (btn) { btn.disabled = false; btn.textContent = '⚡ Run Analysis'; }
+    });
+}
+
+function ovRenderAnalysis(data) {
+  var cfg = [
+    { id:'ovA-overview',  key:'overview',        icon:'📊', label:'Portfolio Overview',   tag:'TAKEAWAY', color:'var(--accent)',  pale:'rgba(61,184,189,0.07)',  border:'rgba(61,184,189,0.2)'  },
+    { id:'ovA-well',      key:'going_well',       icon:'✅', label:'What is Going Well',   tag:'TAKEAWAY', color:'var(--ok)',      pale:'rgba(74,222,128,0.07)',  border:'rgba(74,222,128,0.2)'  },
+    { id:'ovA-concerns',  key:'concerns',         icon:'⚠️', label:'Areas of Concern',     tag:'TAKEAWAY', color:'var(--danger)',  pale:'rgba(248,113,113,0.07)', border:'rgba(248,113,113,0.2)' },
+    { id:'ovA-recs',      key:'recommendations',  icon:'⚡', label:'Recommendations',      tag:'TAKEAWAY', color:'var(--warn)',    pale:'rgba(251,191,36,0.07)',  border:'rgba(251,191,36,0.2)'  }
+  ];
+
+  cfg.forEach(function(box) {
+    var section = data[box.key];
+    var el = document.getElementById(box.id);
+    if (!section || !el) return;
+
+    var bullets = (section.bullets || []).map(function(b) {
+      var html = b.replace(/\*\*([^*]+)\*\*/g, '<strong style="color:'+box.color+'">$1</strong>');
+      return '<li>'+html+'</li>';
+    }).join('');
+
+    var takeaway = (section.takeaway || '').replace(/\*\*([^*]+)\*\*/g, '<strong style="color:'+box.color+'">$1</strong>');
+    var bottomLine = (section.bottom_line || '').replace(/\*\*([^*]+)\*\*/g, '<strong style="color:'+box.color+'">$1</strong>');
+
+    el.innerHTML =
+      '<div style="background:'+box.pale+';border-bottom:1px solid '+box.border+';padding:11px 14px">'
+        +'<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">'
+          +'<span style="font-size:15px">'+box.icon+'</span>'
+          +'<span style="font-family:var(--font-display);font-size:12px;font-weight:800;color:'+box.color+'">'+box.label+'</span>'
+        +'</div>'
+        +'<div style="display:flex;align-items:flex-start;gap:7px">'
+          +'<span class="ova-takeaway-tag" style="color:'+box.color+'">'+box.tag+'</span>'
+          +'<span class="ova-takeaway-text">'+takeaway+'</span>'
+        +'</div>'
+      +'</div>'
+      +'<div class="ova-bullets"><ul>'+bullets+'</ul></div>'
+      +'<div class="ova-bottom" style="background:'+box.pale+';border-top:1px solid '+box.border+'">'
+        +'<span class="ova-bottom-tag" style="color:'+box.color+'">BOTTOM LINE</span>'
+        +'<span class="ova-bottom-text">'+bottomLine+'</span>'
+      +'</div>';
+  });
+}
 </script>
 
 </body>
