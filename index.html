@@ -3967,7 +3967,7 @@ document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeSetti
 .aip-wa-btn{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:5px 11px;border-radius:8px;background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.3);color:#25d366;font-family:var(--font-mono);font-size:9px;cursor:pointer;text-decoration:none;transition:all .15s}
 .aip-wa-btn:hover{background:rgba(37,211,102,0.2)}
 .aip-minichart{margin-top:8px;padding:6px 6px 4px;background:var(--surface);border:1px solid var(--border);border-radius:8px}
-.aip-minichart-box{position:relative;height:88px;width:100%;overflow:hidden}
+.aip-minichart-box{width:100%;line-height:0}
 @keyframes chatSlideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 .stream-cursor{font-size:12px;color:var(--accent);animation:blink .7s ease-in-out infinite;margin-left:1px}
@@ -5391,8 +5391,32 @@ function aiParseForCharts(bubble, text) {
 }
 
 function aiMiniChart(bubble, sku) {
-  if (typeof Chart === 'undefined' || !window.PM || !window.PORT) return;
-  var cid = 'aiChart' + (++_aiMiniChartId);
+  if (!window.PM || !window.PORT) return;
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var share = PORT.fRev > 0 ? sku.fR / PORT.fRev : 0;
+  var vals = PM.map(function (m) { var v = m && m.r != null ? m.r * share : 0; return isFinite(v) ? v : 0; });
+  var maxV = Math.max.apply(null, vals) || 1;
+
+  var W = 120, barH = 44, lblH = 14;
+  var barW = W / 12;
+  var gap = 0.8;
+
+  var bars = vals.map(function (v, i) {
+    var h = Math.max((v / maxV) * barH, v > 0 ? 2 : 0);
+    var fill = v >= maxV * 0.88 ? 'rgba(251,191,36,0.9)' : 'rgba(61,184,189,0.7)';
+    var x = (i * barW + gap).toFixed(2);
+    var y = (barH - h).toFixed(2);
+    var w = (barW - gap * 2).toFixed(2);
+    return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h.toFixed(2)+'" fill="'+fill+'" rx="1.5"/>';
+  }).join('');
+
+  var labels = months.map(function (m, i) {
+    var x = ((i + 0.5) * barW).toFixed(2);
+    return '<text x="'+x+'" y="'+(barH + lblH - 2)+'" text-anchor="middle" font-size="6.5" fill="rgba(128,128,128,0.65)" font-family="monospace">'+m+'</text>';
+  }).join('');
+
+  var svg = '<svg viewBox="0 0 '+W+' '+(barH + lblH)+'" preserveAspectRatio="none" style="display:block;width:100%;height:80px">'+bars+labels+'</svg>';
+
   var wrapper = document.createElement('div');
   wrapper.className = 'aip-minichart';
   var lbl = document.createElement('div');
@@ -5401,39 +5425,9 @@ function aiMiniChart(bubble, sku) {
   wrapper.appendChild(lbl);
   var box = document.createElement('div');
   box.className = 'aip-minichart-box';
-  var canvas = document.createElement('canvas');
-  canvas.id = cid;
-  canvas.width = 0;
-  canvas.height = 88;
-  canvas.style.cssText = 'display:block;width:100%;height:88px';
-  box.appendChild(canvas);
+  box.innerHTML = svg;
   wrapper.appendChild(box);
   bubble.appendChild(wrapper);
-  setTimeout(function () {
-    canvas.width = box.clientWidth || 320;
-    canvas.height = 88;
-    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    var share = PORT.fRev > 0 ? sku.fR / PORT.fRev : 0;
-    var vals = PM.map(function (m) { var v = m && m.r != null ? m.r * share : 0; return isFinite(v) ? +v.toFixed(2) : 0; });
-    var maxV = Math.max.apply(null, vals);
-    var colors = vals.map(function (v) { return v >= maxV * 0.88 ? 'rgba(251,191,36,0.9)' : 'rgba(61,184,189,0.7)'; });
-    var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    var tickColor = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
-    var inst = new Chart(canvas, {
-      type: 'bar',
-      data: { labels: months, datasets: [{ data: vals, backgroundColor: colors, borderRadius: 3, borderSkipped: false, barPercentage: 0.75 }] },
-      options: {
-        responsive: false,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { enabled: false } },
-        scales: {
-          x: { ticks: { font: { size: 8 }, color: tickColor, maxRotation: 0 }, grid: { display: false } },
-          y: { display: false, grid: { display: false } }
-        }
-      }
-    });
-    if (window._chartInsts) _chartInsts.push(inst);
-  }, 80);
 }
 
 // Hook into chatFinaliseStream to add WA + mini-charts after streaming
