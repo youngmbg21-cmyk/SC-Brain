@@ -5406,7 +5406,7 @@ function aiMiniChart(bubble, sku) {
   setTimeout(function () {
     var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     var share = PORT.fRev > 0 ? sku.fR / PORT.fRev : 0;
-    var vals = PM.map(function (m) { return +(m.r * share).toFixed(2); });
+    var vals = PM.map(function (m) { var v = m && m.r != null ? m.r * share : 0; return isFinite(v) ? +v.toFixed(2) : 0; });
     var maxV = Math.max.apply(null, vals);
     var colors = vals.map(function (v) { return v >= maxV * 0.88 ? 'rgba(251,191,36,0.9)' : 'rgba(61,184,189,0.7)'; });
     var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -5417,7 +5417,7 @@ function aiMiniChart(bubble, sku) {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { return c.parsed && c.parsed.y != null ? 'KSh ' + c.parsed.y.toFixed(2) + 'M' : ''; } } } },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { try { return typeof c.parsed.y === 'number' ? 'KSh ' + c.parsed.y.toFixed(2) + 'M' : ''; } catch(e) { return ''; } } } } },
         scales: {
           x: { ticks: { font: { size: 8 }, color: tickColor, maxRotation: 0 }, grid: { display: false } },
           y: { display: false, grid: { display: false } }
